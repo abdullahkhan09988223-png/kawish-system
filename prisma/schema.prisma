@@ -1,0 +1,417 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════
+// کاربران
+// ═══════════════════════════════════════
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("ADMIN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("users")
+}
+
+// ═══════════════════════════════════════
+// استادان
+// ═══════════════════════════════════════
+model Teacher {
+  id             String   @id @default(cuid())
+  employeeNumber String   @unique
+  firstName      String
+  lastName       String
+  fatherName     String?
+  specialization String?
+  phone          String?
+  address        String?
+  hireDate       String?
+  contractStart  String?
+  contractEnd    String?
+  salary         Float    @default(0)
+  salaryPercent  Float    @default(0)
+  photo          String?  @db.Text
+  tazkiraNumber  String?
+  tazkiraPhoto   String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  classRooms     ClassRoom[]
+  subjects       Subject[]
+  schedules      Schedule[]
+  salaries       Salary[]
+  grades         Grade[]
+
+  @@map("teachers")
+}
+
+// ═══════════════════════════════════════
+// کارمندان
+// ═══════════════════════════════════════
+model Employee {
+  id             String   @id @default(cuid())
+  employeeNumber String   @unique
+  firstName      String
+  lastName       String
+  fatherName     String?
+  position       String?
+  department     String?
+  phone          String?
+  address        String?
+  hireDate       String?
+  salary         Float    @default(0)
+  photo          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  empSalaries    EmpSalary[]
+
+  @@map("employees")
+}
+
+// ═══════════════════════════════════════
+// صنف‌ها
+// ═══════════════════════════════════════
+model ClassRoom {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  grade     String?
+  section   String?
+  capacity  Int      @default(30)
+  room      String?
+  teacherId String?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students  Student[]
+  schedules Schedule[]
+
+  @@map("class_rooms")
+}
+
+// ═══════════════════════════════════════
+// دانشجویان
+// ═══════════════════════════════════════
+model Student {
+  id             String   @id @default(cuid())
+  studentNumber  String   @unique
+  firstName      String
+  lastName       String?
+  fatherName     String?
+  classRoomId    String?
+  classRoom      ClassRoom? @relation(fields: [classRoomId], references: [id], onDelete: SetNull)
+
+  timeFrom       String?
+  timeTo         String?
+  phone          String?
+  parentPhone    String?
+  parentName     String?
+  parentRelation String?
+  address        String?
+  enrollmentDate String?
+  serialNumber   Int?
+  birthDate      String?
+  gender         String?
+  tazkiraNumber  String?
+  tazkiraPhoto   String?  @db.Text
+
+  totalFee       Float    @default(0)
+  feeType        String?
+  feeMonthly     Float    @default(0)
+
+  photo          String?  @db.Text
+
+  // وضعیت
+  isActive       Boolean  @default(true)
+  leftDate       String?
+  leftReason     String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  enrollments    Enrollment[]
+  fees           Fee[]
+  attendances    Attendance[]
+  grades         Grade[]
+  certificates   Certificate[]
+  transfers      ClassTransfer[]
+
+  @@map("students")
+}
+
+// ═══════════════════════════════════════
+// تاریخچه انتقال صنف
+// ═══════════════════════════════════════
+model ClassTransfer {
+  id              String   @id @default(cuid())
+  studentId       String
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fromClassRoomId String?
+  fromClassName   String?
+  toClassRoomId   String
+  toClassName     String
+  transferDate    String
+  reason          String?
+  notes           String?
+  createdBy       String?
+  createdAt       DateTime @default(now())
+
+  @@map("class_transfers")
+}
+
+// ═══════════════════════════════════════
+// مضامین
+// ═══════════════════════════════════════
+model Subject {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  hours       Int      @default(3)
+  category    String   @default("general")
+  description String?
+  teacherId   String?
+  teacher     Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  enrollments Enrollment[]
+  schedules   Schedule[]
+  grades      Grade[]
+
+  @@map("subjects")
+}
+// ═══════════════════════════════════════
+// ثبت‌نام
+// ═══════════════════════════════════════
+model Enrollment {
+  id         String   @id @default(cuid())
+  studentId  String
+  subjectId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  enrolledAt DateTime @default(now())
+
+  @@unique([studentId, subjectId])
+  @@map("enrollments")
+}
+
+// ═══════════════════════════════════════
+// جدول هفتگی
+// ═══════════════════════════════════════
+model Schedule {
+  id          String   @id @default(cuid())
+  classRoomId String
+  classRoom   ClassRoom @relation(fields: [classRoomId], references: [id], onDelete: Cascade)
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId   String?
+  teacher     Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  dayOfWeek   String
+  timeFrom    String
+  timeTo      String
+  room        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("schedules")
+}
+
+// ═══════════════════════════════════════
+// فیس (ماهانه)
+// ═══════════════════════════════════════
+model Fee {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  total     Float    @default(0)
+  paid      Float    @default(0)
+  month     String?
+  year      String?
+  dueDate   String?
+  status    String   @default("PENDING")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payments  Payment[]
+
+  @@map("fees")
+}
+
+// ═══════════════════════════════════════
+// پرداخت‌ها (با شماره رسید)
+// ═══════════════════════════════════════
+model Payment {
+  id            String   @id @default(cuid())
+  receiptNumber String   @unique
+  feeId         String
+  fee           Fee      @relation(fields: [feeId], references: [id], onDelete: Cascade)
+  amount        Float    @default(0)
+  date          String?
+  method        String?
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  @@map("payments")
+}
+
+// ═══════════════════════════════════════
+// نمرات
+// ═══════════════════════════════════════
+model Grade {
+  id             String   @id @default(cuid())
+  studentId      String
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId      String?
+  teacher        Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  semester       String?
+  midtermScore   Float    @default(0)
+  finalScore     Float    @default(0)
+  practicalScore Float    @default(0)
+  totalScore     Float    @default(0)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([studentId, subjectId, semester])
+  @@map("grades")
+}
+
+// ═══════════════════════════════════════
+// معاش استادان
+// ═══════════════════════════════════════
+model Salary {
+  id            String   @id @default(cuid())
+  teacherId     String
+  teacher       Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  fixedAmount   Float    @default(0)
+  percent       Float    @default(0)
+  amount        Float    @default(0)
+  studentsCount Int      @default(0)
+  totalPaidFees Float    @default(0)
+  day           String?
+  month         String?
+  year          String?
+  isPaid        Boolean  @default(false)
+  paidDate      String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("salaries")
+}
+
+// ═══════════════════════════════════════
+// معاش کارمندان
+// ═══════════════════════════════════════
+model EmpSalary {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  amount     Float    @default(0)
+  day        String?
+  month      String?
+  year       String?
+  isPaid     Boolean  @default(false)
+  paidDate   String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("emp_salaries")
+}
+
+// ═══════════════════════════════════════
+// مصارف
+// ═══════════════════════════════════════
+model Expense {
+  id          String   @id @default(cuid())
+  title       String
+  category    String?
+  amount      Float    @default(0)
+  date        String?
+  day         String?
+  month       String?
+  year        String?
+  description String?
+  paidBy      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("expenses")
+}
+
+// ═══════════════════════════════════════
+// حاضری
+// ═══════════════════════════════════════
+model Attendance {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date      String
+  status    String   @default("PRESENT")
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, date])
+  @@map("attendances")
+}
+
+// ═══════════════════════════════════════
+// تقدیرنامه و تصدیق‌نامه
+// ═══════════════════════════════════════
+model Certificate {
+  id            String   @id @default(cuid())
+  serialNumber  String   @unique
+  type          String
+  title         String
+  recipientName String
+  fatherName    String?
+  studentId     String?
+  student       Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  className     String?
+  courseName    String?
+  startDate     String?
+  endDate       String?
+  grade         String?
+  position      String?
+  body          String   @db.Text
+  issuedBy      String?
+  issuedAt      String?
+  validUntil    String?
+  notes         String?
+  template      String   @default("classic")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("certificates")
+}
+
+// ═══════════════════════════════════════
+// لاگ فعالیت کاربران
+// ═══════════════════════════════════════
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  userName   String?
+  userRole   String?
+  action     String
+  tableName  String
+  recordId   String?
+  recordName String?
+  details    String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@map("activity_logs")
+}
