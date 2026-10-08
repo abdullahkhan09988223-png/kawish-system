@@ -57,3 +57,5 @@ project_tree.txt
 
 # Backup scripts
 BACKUP.bat
+node_modules
+node_modules
