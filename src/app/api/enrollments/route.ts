@@ -20,7 +20,7 @@ export async function GET(req: Request) {
           select: { id: true, firstName: true, lastName: true, studentNumber: true },
         },
         subject: {
-          select: { id: true, name: true, code: true, credits: true },
+          select: { id: true, name: true, code: true },
         },
       },
     });
