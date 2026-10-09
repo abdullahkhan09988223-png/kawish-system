@@ -198,7 +198,7 @@ async function main() {
           studentId: student.id,
           total: student.totalFee,
           paid: 0,
-          semester: 'چهارده یک',
+        
           status: 'PENDING',
         },
       });
